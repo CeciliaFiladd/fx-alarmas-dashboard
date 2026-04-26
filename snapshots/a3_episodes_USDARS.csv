@@ -1,0 +1,20 @@
+peak_date,start_date,direction,mag_pct,days_to_peak,days_to_recover,permanent,vix_max,dxy_ret_pct,soybeans_ret_pct,driver_class,known_event
+2023-12-14,2023-11-06,up,130.38,28,,True,15.3,-3.35,-3.04,USD_weakness,Salida cepo Milei
+2018-09-13,2018-08-06,up,44.59,28,,True,14.9,-1.2,-3.42,local_idiosyncratic,Corrida 2018 — profundización
+2019-08-14,2019-07-11,up,44.47,24,,True,24.6,0.61,-5.91,soybeans_drop,PASO 2019
+2016-01-08,2015-11-30,up,44.42,29,,True,27.0,-1.05,-0.23,global_riskoff,
+2023-08-14,2023-07-03,up,35.02,30,,True,17.9,0.96,-12.56,soybeans_drop,Devaluación Massa post-PASO
+2014-01-24,2013-12-16,up,27.13,29,,True,21.4,1.17,-3.36,local_idiosyncratic,Devaluación Kicillof
+2018-06-11,2018-04-30,up,26.26,30,,True,17.0,3.3,-15.15,USD_strength+soybeans_drop,
+2025-07-31,2025-06-19,up,17.77,30,,True,22.2,-0.74,-10.05,soybeans_drop,
+2019-03-28,2019-02-14,up,14.88,30,,True,16.6,0.43,-0.5,local_idiosyncratic,
+2025-04-15,2025-03-10,up,12.76,26,4.0,False,52.3,-4.27,5.0,global_riskoff_strong+USD_weakness,Liberación cepo personas (acuerdo FMI)
+2018-01-25,2017-12-14,up,12.71,30,,True,17.3,-4.59,1.14,USD_weakness,
+2025-10-21,2025-09-24,up,11.42,19,14.0,False,25.3,1.97,8.99,global_riskoff,
+2016-06-27,2016-06-14,up,11.31,9,,True,25.8,1.47,-9.85,global_riskoff+soybeans_drop,
+2017-07-27,2017-06-15,up,10.44,30,,True,12.5,-3.99,1.55,USD_weakness,
+2018-11-27,2018-11-12,up,10.34,11,5.0,False,23.2,-1.06,5.16,local_idiosyncratic,
+2016-03-23,2016-03-01,dn,-9.98,16,68.0,False,18.7,-3.79,7.93,USD_weakness+soybeans_rally,
+2008-11-03,2008-09-23,up,9.97,29,8.0,False,80.1,13.69,-25.27,global_riskoff_strong+USD_strength+soybeans_drop,
+2023-04-04,2023-02-21,up,9.15,30,,True,26.5,-2.52,-3.12,global_riskoff+USD_weakness,
+2022-11-18,2022-10-07,up,9.11,30,,True,33.6,-5.43,6.6,global_riskoff+USD_weakness,

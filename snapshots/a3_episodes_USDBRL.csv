@@ -1,0 +1,31 @@
+peak_date,start_date,direction,mag_pct,days_to_peak,days_to_recover,permanent,vix_max,dxy_ret_pct,iron_ret_pct,driver_class,known_event
+2008-10-07,2008-08-26,up,48.1,30,167.0,False,70.3,6.68,,global_riskoff_strong+USD_strength,Lehman — pico volatilidad
+2020-06-08,2020-05-13,dn,-22.08,18,8.0,False,40.8,-2.81,16.64,global_riskoff_strong+USD_weakness+iron_rally,
+2015-09-23,2015-08-20,up,20.74,24,11.0,False,40.7,0.08,-5.07,global_riskoff_strong+iron_drop,Downgrade S&P Brasil a junk
+2009-01-06,2008-12-05,dn,-19.96,22,31.0,False,59.9,-3.34,,global_riskoff_strong+USD_weakness,
+2011-10-03,2011-08-31,up,19.29,23,18.0,False,45.5,3.86,-8.47,global_riskoff_strong+USD_strength+iron_drop,Crisis deuda europea
+2016-04-11,2016-03-01,dn,-15.03,29,,True,18.7,-3.81,18.73,USD_weakness+iron_rally,Impeachment Dilma — votación cámara
+2006-05-23,2006-05-09,up,14.91,10,27.0,False,18.7,-0.92,,local_idiosyncratic,
+2020-12-11,2020-10-30,dn,-14.54,30,20.0,False,38.0,-4.25,29.05,global_riskoff_strong+USD_weakness+iron_rally,
+2018-10-22,2018-09-13,dn,-14.19,27,26.0,False,25.2,1.84,6.85,global_riskoff+iron_rally,
+2007-08-15,2007-07-23,up,13.9,17,10.0,False,30.8,0.4,,global_riskoff,
+2015-04-27,2015-03-20,dn,-12.95,26,21.0,False,15.8,-3.36,0.88,USD_weakness,
+2013-06-20,2013-05-13,up,12.44,28,,True,20.5,-0.11,-11.34,iron_drop,
+2022-05-09,2022-04-04,up,12.34,25,10.0,False,34.8,3.77,-18.49,global_riskoff+USD_strength+iron_drop,
+2018-06-07,2018-04-26,up,12.28,30,102.0,False,17.0,3.53,0.15,USD_strength,
+2009-04-08,2009-03-03,dn,-12.14,26,,True,50.9,-3.3,,global_riskoff_strong+USD_weakness,
+2013-09-18,2013-08-21,dn,-12.14,20,39.0,False,17.0,-1.29,-1.46,local_idiosyncratic,
+2019-08-29,2019-07-18,up,12.12,30,,True,24.6,1.65,-26.0,iron_drop,
+2022-07-21,2022-06-09,up,12.12,30,5.0,False,34.0,2.6,-25.35,global_riskoff+USD_strength+iron_drop,
+2016-06-30,2016-06-01,dn,-12.01,21,96.0,False,25.8,0.88,14.29,global_riskoff+iron_rally,
+2017-01-11,2016-12-02,dn,-11.85,28,,True,14.1,-0.03,6.62,iron_rally,
+2009-08-17,2009-07-09,dn,-11.83,27,10.0,False,29.8,-2.32,,global_riskoff,
+2014-10-02,2014-09-03,up,11.55,21,,True,21.2,3.67,-6.04,USD_strength+iron_drop,
+2015-02-12,2015-01-28,up,11.53,11,,True,21.0,-0.23,-7.85,iron_drop,
+2022-02-24,2022-01-19,dn,-11.12,26,92.0,False,33.3,3.29,19.52,global_riskoff+USD_strength+iron_rally,
+2021-05-10,2021-03-29,dn,-10.52,30,108.0,False,27.6,-3.37,26.46,global_riskoff+USD_weakness+iron_rally,
+2024-12-19,2024-11-07,up,10.51,30,25.0,False,27.6,3.34,-1.25,global_riskoff+USD_strength,Crisis fiscal Lula 2
+2024-07-01,2024-05-20,up,10.41,30,,True,14.5,-0.12,-6.53,iron_drop,
+2012-05-17,2012-04-09,up,10.37,28,,True,25.1,3.35,-6.81,global_riskoff+USD_strength+iron_drop,
+2010-05-19,2010-04-12,up,10.0,27,18.0,False,45.8,7.35,,global_riskoff_strong+USD_strength,
+2008-02-27,2008-01-21,dn,-9.78,27,126.0,False,31.0,-4.39,,global_riskoff+USD_weakness,
