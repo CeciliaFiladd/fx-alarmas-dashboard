@@ -125,7 +125,7 @@ KNOWN_EVENTS = {
 # ---------------- Fetch Yahoo ----------------
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_yahoo_one(ticker: str, days: int = 600) -> pd.Series:
+def fetch_yahoo_one(ticker: str, days: int = 1900) -> pd.Series:
     now = int(datetime.now(timezone.utc).timestamp())
     start = now - days * 24 * 3600
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
@@ -457,6 +457,22 @@ def card_data(ccy, fx_series, pred):
     base20 = EXT_THR[(ccy, "20d")] * 100
     alarm_1d = abs(ret_1d) > THRESHOLDS_1D[ccy] * 100 if ret_1d else False
     alarm_5d = abs(ret_5d) > THRESHOLDS_5D[ccy] * 100 if ret_5d else False
+
+    # Posición histórica: ventana de 5 años (~1260 bdays)
+    look = s.tail(1260)
+    pct_5y = None
+    rng_min = rng_max = None
+    rng_min_date = rng_max_date = None
+    if len(look) >= 100:
+        pct_5y = float((look <= float(look.iloc[-1])).mean() * 100)
+        rng_min = float(look.min()); rng_max = float(look.max())
+        rng_min_date = look.idxmin().strftime("%Y-%m-%d")
+        rng_max_date = look.idxmax().strftime("%Y-%m-%d")
+    # Cambios acumulados
+    chg_12m_pct = ((float(s.iloc[-1]) / float(s.iloc[-252]) - 1) * 100) if len(s) >= 252 else None
+    n5y = min(1260, len(s) - 1)
+    chg_5y_pct = ((float(s.iloc[-1]) / float(s.iloc[-n5y]) - 1) * 100) if n5y >= 100 else None
+
     return {
         "ccy": ccy, "px": px,
         "ret_1d": ret_1d, "ret_5d": ret_5d, "ret_20d": ret_20d,
@@ -468,6 +484,11 @@ def card_data(ccy, fx_series, pred):
         "alarma_1d": alarm_1d, "alarma_5d": alarm_5d,
         "pred_5d": {"prob": ((p5.get("prob") or 0)*100), "ret": ((p5.get("ret") or 0)*100), "umbral": base5},
         "pred_20d": {"prob": ((p20.get("prob") or 0)*100), "ret": ((p20.get("ret") or 0)*100), "umbral": base20},
+        "pct_5y": round(pct_5y, 1) if pct_5y is not None else None,
+        "rng_min": rng_min, "rng_max": rng_max,
+        "rng_min_date": rng_min_date, "rng_max_date": rng_max_date,
+        "chg_12m_pct": round(chg_12m_pct, 1) if chg_12m_pct is not None else None,
+        "chg_5y_pct": round(chg_5y_pct, 0) if chg_5y_pct is not None else None,
     }
 
 
@@ -535,6 +556,13 @@ HTML_TEMPLATE = r"""
 .fx-wrapper .spark-extremes b{font-variant-numeric:tabular-nums;}
 .fx-wrapper .spark-tooltip{position:absolute;pointer-events:none;background:#0f172a;color:#fff;padding:6px 9px;border-radius:5px;font-size:11px;line-height:1.4;white-space:nowrap;display:none;z-index:10;transform:translate(-50%,-110%);box-shadow:0 4px 12px rgba(0,0,0,0.15);}
 .fx-wrapper h3.sec-title{margin:24px 0 12px 0;font-size:16px;font-weight:600;color:#1a1a1a;}
+.fx-wrapper .hist-block{background:#f8fafc;border:1px solid #e2e8f0;border-radius:5px;padding:8px 10px;margin:6px 0;font-size:12px;color:#475569;}
+.fx-wrapper .hist-zone{font-size:13px;font-weight:600;}
+.fx-wrapper .hist-zone.zone-low{color:#16a34a;}
+.fx-wrapper .hist-zone.zone-mid{color:#64748b;}
+.fx-wrapper .hist-zone.zone-high{color:#dc2626;}
+.fx-wrapper .hist-detail{font-size:11px;color:#64748b;margin-top:2px;}
+.fx-wrapper .ars-note{font-size:11px;color:#94a3b8;margin-top:4px;font-style:italic;}
 </style>
 <div class="fx-wrapper">
 
@@ -544,18 +572,19 @@ HTML_TEMPLATE = r"""
   <div class="help-card"><b>Sparkline interactivo</b><br>Pasá el mouse sobre el gráfico para ver el valor de cada día. Las líneas punteadas marcan máx y mín del período de 60 días hábiles.</div>
   <div class="help-card"><b>Probabilidad de movimiento extremo</b><br>Probabilidad estimada por el modelo de que en los próximos 5 (o 20) días la moneda se mueva más que un umbral. Comparar contra el umbral. Ratio &gt; 2× = el modelo ve algo distinto a lo habitual.</div>
   <div class="help-card"><b>Dirección esperada</b><br><span class="dir-up">↑ USD sube</span> = la moneda local se debilita (mejor haber comprado dólares antes). <span class="dir-dn">↓ USD baja</span> = la moneda local se fortalece (mejor para vender dólares).</div>
+  <div class="help-card"><b>Posición histórica (5 años)</b><br>Bajo el precio cada moneda muestra una etiqueta de zona basada en su rango de los últimos 5 años: <span class="dir-dn">zona baja</span> (cerca del mínimo, históricamente revierte hacia arriba), <span class="dir-up">zona alta</span> (cerca del máximo, históricamente revierte hacia abajo), o mitad. ARS no aplica porque solo se devalúa.</div>
   <div class="help-card"><b>Drivers globales</b><br>Variables que mueven los flotantes (BRL, CLP, COP, INR). Cada tarjeta muestra su evolución 60 días + cambios recientes.</div>
-  <div class="help-card"><b>Limitación importante</b><br>El modelo acierta más que tirar moneda pero no es oráculo (AUC ≈ 0,57 a 5 días). Es señal complementaria al monitoreo, no sustituto. ARS sigue siendo difícil por su drift y régimen de cepo.</div>
+  <div class="help-card"><b>Limitación importante</b><br>El modelo acierta <b>57 de cada 100 días</b> sobre si va a haber un movimiento grande, vs 50/100 que sería puro azar. Útil pero modesto, no garantía. ARS sigue siendo difícil por su drift y régimen de cepo.</div>
 </div>
 
 <h3 class="sec-title">¿Qué mueve a cada moneda?</h3>
 <div class="help-grid">
-  <div class="help-card"><b>USDARS</b><br>Dominado por <b>política local</b>: cepos, devaluaciones administrativas, elecciones, FMI. Drivers globales explican &lt;5% de los movimientos. La soja ayuda en algunos episodios. Característica: el peso solo se devalúa, casi nunca se aprecia.</div>
-  <div class="help-card"><b>USDBRL</b><br>Mezcla 60-40 entre <b>drivers globales</b> (DXY, VIX, hierro) y <b>política local</b> (fiscal, electoral). Sensible al "risk-off". Episodios: Lehman 2008, COVID 2020, elección Lula 2022.</div>
-  <div class="help-card"><b>USDCLP</b><br>El más "limpio": <b>cobre + DXY</b>. Cuando el cobre cae fuerte, el peso chileno se debilita (Chile = ~50% exportaciones de cobre). Episodios: estallido social 2019, intervención BCCh 2022.</div>
-  <div class="help-card"><b>USDCOP</b><br><b>Petróleo + risk-off</b>. Sensible al Brent (Colombia es petrolero neto). Política local mueve fuerte en eventos discretos pero no daily.</div>
-  <div class="help-card"><b>USDINR</b><br><b>Managed float</b>: el RBI interviene activamente y suaviza shocks. Solo eventos globales muy fuertes (taper 2013, COVID, Fed hiking 2022) pasan.</div>
-  <div class="help-card"><b>Drivers globales</b><br><b>DXY</b> afecta a todos los flotantes. <b>VIX</b> = BRL e INR sobre todo. <b>Cobre</b> = CLP. <b>Brent</b> = COP, INR. <b>Hierro</b> = BRL.</div>
+  <div class="help-card"><b>USDARS — Argentina</b><br>Dominado por <b>política local</b> (cepos, devaluaciones, elecciones, FMI). Drivers globales explican &lt;5%. Es <b>exportador de soja</b> (suba de soja = favorable, peso se aprecia; aunque el efecto suele ser chico). Característica: el peso solo se devalúa, casi nunca se aprecia.</div>
+  <div class="help-card"><b>USDBRL — Brasil</b><br>Mezcla 60-40: <b>drivers globales</b> (DXY, VIX, hierro) + <b>política local</b>. Sensible al "risk-off". Es <b>exportador de hierro y soja</b> (suba = favorable). Episodios: Lehman 2008, COVID 2020, Lula 2022.</div>
+  <div class="help-card"><b>USDCLP — Chile</b><br>El más "limpio": <b>cobre + DXY</b>. Es <b>exportador de cobre</b> (~50% de sus exportaciones). Cobre sube → peso se aprecia → USDCLP baja. Sensible a demanda china. Episodios: estallido social 2019, intervención BCCh 2022.</div>
+  <div class="help-card"><b>USDCOP — Colombia</b><br><b>Petróleo + risk-off</b>. Es <b>exportador de petróleo</b>: Brent sube → peso colombiano se aprecia → USDCOP baja. Política local mueve en eventos discretos (post-Petro 2022).</div>
+  <div class="help-card"><b>USDINR — India</b><br><b>Managed float</b>: el RBI interviene activamente. Es <b>importador de petróleo</b> (~85% de su consumo): Brent sube → más dólares saliendo → rupia se debilita → USDINR sube. Solo eventos globales muy fuertes pasan el filtro.</div>
+  <div class="help-card"><b>Drivers globales</b><br><b>DXY</b> afecta a todos los flotantes. <b>VIX</b> = BRL e INR sobre todo. <b>Cobre</b> = CLP (exportador). <b>Brent</b> = COP (exportador) y INR (importador, sentido inverso). <b>Hierro</b> = BRL (exportador).</div>
 </div>
 
 <h3 class="sec-title">Estado por moneda</h3>
@@ -574,6 +603,33 @@ const DRIVERS = __DRIVERS_DATA__;
 const EPISODES = __EPISODES_DATA__;
 const AFFECTS = __AFFECTS_DATA__;
 const HUMAN_MAP = __HUMAN_MAP_DATA__;
+
+// Contexto: si el commodity afectado es relevante para la moneda, agregar nota
+// sobre si es favorable o desfavorable.
+const COMM_CONTEXT = {
+  "USDARS": {
+    "soybeans_drop": "desfavorable para Argentina (exportador)",
+    "soybeans_rally": "favorable para Argentina (exportador)",
+  },
+  "USDBRL": {
+    "iron_drop": "desfavorable para Brasil (exportador)",
+    "iron_rally": "favorable para Brasil (exportador)",
+    "soybeans_drop": "desfavorable para Brasil (exportador)",
+    "soybeans_rally": "favorable para Brasil (exportador)",
+  },
+  "USDCLP": {
+    "copper_drop": "desfavorable para Chile (exportador de cobre)",
+    "copper_rally": "favorable para Chile (exportador de cobre)",
+  },
+  "USDCOP": {
+    "brent_drop": "desfavorable para Colombia (exportador de petróleo)",
+    "brent_rally": "favorable para Colombia (exportador de petróleo)",
+  },
+  "USDINR": {
+    "brent_drop": "favorable para India (importador de petróleo)",
+    "brent_rally": "desfavorable para India (importador de petróleo)",
+  },
+};
 
 const fmtRet = (v) => v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(2) + '%';
 const cls = (v) => v == null ? '' : (v > 0 ? 'ret-up' : 'ret-dn');
@@ -643,6 +699,30 @@ function attachInteraction(svg, vals, dates, w, h, padTop, padBot, fmtFn) {
   });
 }
 
+function buildHistBlock(c) {
+  if (c.ccy === 'USDARS') {
+    // ARS: solo se devalúa, mostrar cambio acumulado
+    const c12 = c.chg_12m_pct == null ? '—' : (c.chg_12m_pct > 0 ? '+' : '') + c.chg_12m_pct.toFixed(1) + '%';
+    const c5y = c.chg_5y_pct == null ? '—' : (c.chg_5y_pct > 0 ? '+' : '') + c.chg_5y_pct.toFixed(0) + '%';
+    return '<div class="hist-block">'
+      + '<div>Subió <b>' + c12 + '</b> en últimos 12m · <b>' + c5y + '</b> en últimos 5 años</div>'
+      + '<div class="ars-note">El peso solo se devalúa históricamente — la lógica "barato/caro" no aplica</div>'
+      + '</div>';
+  }
+  if (c.pct_5y == null) return '';
+  let zone, zoneText, zoneNote;
+  if (c.pct_5y < 25) { zone = 'zone-low'; zoneText = 'Zona baja'; zoneNote = 'históricamente, dólar tiende a subir'; }
+  else if (c.pct_5y < 50) { zone = 'zone-mid'; zoneText = 'Mitad baja'; zoneNote = 'sin sesgo claro'; }
+  else if (c.pct_5y < 75) { zone = 'zone-mid'; zoneText = 'Mitad alta'; zoneNote = 'sin sesgo claro'; }
+  else { zone = 'zone-high'; zoneText = 'Zona alta'; zoneNote = 'históricamente, dólar tiende a bajar'; }
+  const fmt = v => v == null ? '—' : (v > 100 ? v.toFixed(2) : v.toFixed(3));
+  return '<div class="hist-block">'
+    + '<div><span class="hist-zone ' + zone + '">' + zoneText + '</span> · percentil ' + c.pct_5y.toFixed(0) + '% (5 años)</div>'
+    + '<div class="hist-detail">' + zoneNote + '</div>'
+    + '<div class="hist-detail">Rango 5y: <b>' + fmt(c.rng_min) + '</b> → <b>' + fmt(c.rng_max) + '</b></div>'
+    + '</div>';
+}
+
 const cardsDiv = document.getElementById('fx-cards');
 for (const c of CARDS) {
   const lastUp = c.spark[c.spark.length-1] >= c.spark[0];
@@ -653,10 +733,12 @@ for (const c of CARDS) {
   const probWidth5 = Math.min(100, p5.prob * 2.5);
   const probWidth20 = Math.min(100, p20.prob * 2.5);
   const alarmHtml = (c.alarma_1d || c.alarma_5d) ? '<span class="alarm-on">ALARMA</span>' : '<span class="alarm-off">ok</span>';
+  const histBlock = buildHistBlock(c);
   const html = ''
     + '<div class="card">'
     + '<div class="ccy-name">' + c.ccy + alarmHtml + '</div>'
     + '<div class="px">' + c.px.toFixed(c.px > 100 ? 2 : 4) + '</div>'
+    + histBlock
     + '<div class="spark-wrap" data-ccy="' + c.ccy + '">'
     +   '<svg class="spark-svg" viewBox="0 0 320 90" preserveAspectRatio="none">' + sparkInner + '</svg>'
     +   '<div class="spark-tooltip"></div>'
@@ -704,8 +786,7 @@ for (const name of Object.keys(DRIVERS)) {
     +   '<span>5d <b class="' + c5 + '">' + fmtP(d.chg_5d_pct) + '</b></span>'
     +   '<span>20d <b class="' + c20 + '">' + fmtP(d.chg_20d_pct) + '</b></span>'
     + '</div>'
-    + '<div class="driver-affects">' + (AFFECTS[name] || '') + '</div>'
-    + '</div>';
+    + '<div class="driver-affects">' + (AFFECTS[name] || '') + '</div>'    + '</div>';
   drvDiv.insertAdjacentHTML('beforeend', html);
 }
 document.querySelectorAll('.spark-wrap[data-drv]').forEach(wrap => {
@@ -717,9 +798,13 @@ document.querySelectorAll('.spark-wrap[data-drv]').forEach(wrap => {
 });
 
 const epDiv = document.getElementById('fx-episodes');
-function humanize(s) {
+function humanize(s, ccy) {
   if (!s) return '—';
-  return s.split('+').map(t => HUMAN_MAP[t] || t).join(' + ');
+  return s.split('+').map(t => {
+    const human = HUMAN_MAP[t] || t;
+    const ctx = (COMM_CONTEXT[ccy] || {})[t];
+    return ctx ? human + ' (' + ctx + ')' : human;
+  }).join(' + ');
 }
 if (EPISODES.length === 0) {
   epDiv.innerHTML = '<p style="color:#64748b;font-size:13px;">Sin episodios &gt; umbral en los últimos 180 días — período tranquilo.</p>';
@@ -737,7 +822,7 @@ if (EPISODES.length === 0) {
       + '<td class="num ' + (e.mag_pct > 0 ? 'ret-up' : 'ret-dn') + '">' + (e.mag_pct > 0 ? '+' : '') + e.mag_pct.toFixed(2) + '%</td>'
       + '<td class="num">' + e.days_to_peak + '</td>'
       + '<td>' + (e.permanent ? 'Sí (no se corrigió)' : 'No (se revirtió)') + '</td>'
-      + '<td style="font-size:12px;color:#475569;">' + humanize(e.driver_class) + evNote + '</td>'
+      + '<td style="font-size:12px;color:#475569;">' + humanize(e.driver_class, e.ccy) + evNote + '</td>'
       + '</tr>';
   }
   h += '</tbody></table>';
@@ -757,8 +842,6 @@ def render_html(cards_data, drivers_data, episodes_data):
     )
 
 
-# ---------------- Main ----------------
-
 def main():
     st.title("Sistema de alarmas FX")
 
@@ -771,8 +854,9 @@ def main():
         )
         st.markdown("### Limitaciones")
         st.markdown(
-            "- AUC ≈ 0,57 a 5 días para los flotantes. Es señal modesta, no oráculo.\n"
-            "- ARS está dominado por política local; los drivers globales explican <5%.\n"
+            "- El modelo acierta **57 de cada 100 días** sobre si va a haber un movimiento grande, "
+            "vs 50 de 100 que sería puro azar. Útil pero modesto, no garantía.\n"
+            "- ARS está dominado por política local; los drivers globales explican menos del 5%.\n"
             "- Si FRED no responde, se usa snapshot del proyecto como fallback."
         )
         st.markdown("---")
@@ -813,7 +897,7 @@ def main():
 
     import streamlit.components.v1 as components
     html = render_html(cards_data, drivers_data, episodes_data)
-    height = 2200 + len(episodes_data) * 50
+    height = 2400 + len(episodes_data) * 50
     components.html(html, height=height, scrolling=True)
 
     fred_msg = {"live": "FRED en vivo", "snapshot": "FRED snapshot (fallback)", "none": "sin FRED"}.get(fred_source, "")
